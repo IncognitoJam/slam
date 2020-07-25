@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from skimage.measure import ransac
-from skimage.transform import FundamentalMatrixTransform
+from skimage.transform import EssentialMatrixTransform
 
 np.set_printoptions(suppress=True)
 
@@ -9,6 +9,21 @@ np.set_printoptions(suppress=True)
 def add_ones(x):
     """Turn [[x, y]] into [[x, y, 1]"""
     return np.concatenate([x, np.ones((x.shape[0], 1))], axis=1)
+
+def extract_rt(E):
+    W = np.mat([[0, -1, 0], [1, 0, 0], [0, 0, 1]], dtype=float)
+    U, d, Vt = np.linalg.svd(E)
+
+    assert np.linalg.det(U) > 0
+    if np.linalg.det(Vt) < 0:
+        Vt *= -1.0
+
+    R = np.dot(np.dot(U, W), Vt)
+    if np.sum(R.diagonal()) < 0:
+        R = np.dot(np.dot(U, W.T), Vt)
+    t = U[:, 2]
+
+    return R, t
 
 
 class Extractor:
@@ -54,13 +69,13 @@ class Extractor:
             ret[:, 1, :] = self.normalise(ret[:, 1, :])
 
             model, inliers = ransac((ret[:, 0], ret[:, 1]),
-                                    FundamentalMatrixTransform,
+                                    EssentialMatrixTransform,
                                     min_samples=8,
-                                    residual_threshold=1,
-                                    max_trials=100)
+                                    residual_threshold=0.005,
+                                    max_trials=200)
             ret = ret[inliers]
-            s, v, d = np.linalg.svd(model.params)
-            print(v)
+            R, t = extract_rt(model.params)
+            print(R, t)
 
         self.last = {'kps': kps, 'des': des}
         return ret

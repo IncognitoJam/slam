@@ -6,7 +6,7 @@ from extractor import Extractor
 
 W, H = 1920 // 2, 1080 // 2
 SIZE = (W, H)
-F = 1
+F = 270
 K = np.array(([F, 0, W // 2], [0, F, H // 2], [0, 0, 1]))
 
 display = Display(SIZE)
